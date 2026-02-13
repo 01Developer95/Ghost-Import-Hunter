@@ -20,6 +20,32 @@
 
 ---
 
+## 🤔 What is a Hallucination?
+
+AI coding assistants often suggest imports that **look real but don't exist**. Ghost Hunter catches these bugs before they break your app.
+
+### Examples of what Ghost Hunter catches:
+
+**1. The "Fake Function" Hallucination**
+```typescript
+import { nonexistent } from 'fs'; 
+// ❌ Error: 'fs' exists, but it has no export named 'nonexistent'.
+```
+
+**2. The "Wrong Library" Hallucination**
+```typescript
+import { notARealColor } from 'chalk'; 
+// ❌ Error: 'chalk' exists, but 'notARealColor' is not a valid color.
+```
+
+**3. The "Ghost Dependency" Hallucination**
+```typescript
+import { utils } from 'dependency-i-never-installed'; 
+// ❌ Error: Module 'dependency-i-never-installed' is not in node_modules.
+```
+
+---
+
 ## 📦 Installation
 
 ### npx (Recommended)
