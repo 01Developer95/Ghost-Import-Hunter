@@ -121,6 +121,30 @@ Ghost Hunter supports a `.ghostrc` file:
 
 
 
+---
+
+## 👨‍💻 Development
+
+If you want to contribute or modify the tool, here are the commands you need:
+
+1. **Build the Project**
+   ```bash
+   npm run build
+   ```
+   - **What it does:** Compiles TypeScript (`src/index.ts`) into JavaScript (`dist/index.js`).
+   - **Why:** Node.js cannot run TypeScript directly.
+   - **When:** Run this after every code change.
+
+2. **Test Locally**
+   ```bash
+   # Run against the 'fixtures' folder to see it catch errors
+   node dist/index.js fixtures
+   ```
+   - **What it does:** Runs the compiled tool on a test folder.
+   - **Why:** To verify your changes work without publishing to npm.
+
+---
+
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) for details
