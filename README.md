@@ -46,6 +46,24 @@ import { utils } from 'dependency-i-never-installed';
 
 ---
 
+## 🧠 How it Works (Under the Hood)
+
+Ghost Hunter uses three core technologies to ensure your code is safe:
+
+### 1. `glob` - The Scanner
+**Role:** Finding your files.
+Just like your terminal finds files when you type `ls *.ts`, Ghost Hunter uses `glob` to scan your entire project's TypeScript and JavaScript files, ignoring junk like `node_modules`.
+
+### 2. `fs` (File System) - The Reader
+**Role:** Reading your code.
+`fs` is the engine that allows Ghost Hunter to open every file found by the scanner and read its contents to find imports to verify.
+
+### 3. `chalk` - The Reporter
+**Role:** Making sense of the output.
+When a hallucination is found, Ghost Hunter uses `chalk` to highlight the error in **red** and the file path in **bold**, making it impossible to miss critical bugs in your terminal.
+
+---
+
 ## 📦 Installation
 
 ### npx (Recommended)
