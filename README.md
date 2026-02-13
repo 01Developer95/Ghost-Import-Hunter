@@ -119,33 +119,7 @@ Ghost Hunter supports a `.ghostrc` file:
 
 ---
 
-## 🌐 Website
 
-This repository contains the marketing website for Ghost Hunter, built with:
-
-- **React 19** - UI framework
-- **TypeScript** - Type safety
-- **Vite** - Build tool
-- **Tailwind CSS** - Styling
-- **Framer Motion** - Animations
-
-### Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-```
-
----
 
 ## 📄 License
 
