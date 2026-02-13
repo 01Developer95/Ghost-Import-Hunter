@@ -1,27 +1,125 @@
-# Ghost Import Hunter 👻
+<div align="center">
+  <img src="./media/header.png" alt="Ghost Hunter" width="100%">
+</div>
 
-**The AI Hallucination Detector for Codebases.**
+<div align="center">
 
-AI coding assistants (ChatGPT, Copilot) often "hallucinate" code imports—suggesting functions that don't satisfy the installed version of a library or don't exist at all.
+![Ghost Hunter](https://img.shields.io/badge/status-active-success.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Node](https://img.shields.io/badge/node-%3E%3D16-brightgreen.svg)
 
-**Ghost Hunter** is a deterministic tool that scans your TypeScript/JavaScript project and verifies every import against your actual `node_modules`.
+</div>
 
-## Features
-- 🚨 **Hallucination Detection**: Finds imports that do not exist in the installed package version.
-- 📦 **Zero-Config**: Just run it in your project root.
-- ⚡ **Fast**: Uses AST parsing and efficient caching.
+---
 
-## Usage
+## 🚀 Features
 
+- **Deterministic Validation** - Verify every import against your actual installed modules. No guessing or regex.
+- **Zero Configuration** - Works out of the box. Just run `npx ghost-hunter` in your project root.
+- **CI/CD Ready** - Fails the build if hallucinations are detected. Preventing bad code from merging.
+
+---
+
+## 📦 Installation
+
+### npx (Recommended)
 ```bash
-# Run in your project directory
-npx ts-node src/index.ts .
+npx ghost-hunter .
 ```
 
-## How it works
-1.  **Scans**: Parses all `.ts/.js` files to find imports.
-2.  **Resolves**: Locates the `package.json` and type definitions (`.d.ts`) for every imported module.
-3.  **Verifies**: Checks if the specific named export (e.g., `import { foo }`) actually exists in the library's exports.
+### Global Install
+```bash
+npm install -g ghost-hunter
+```
 
-## License
-MIT
+---
+
+## 🛠️ Usage
+
+### Basic Usage
+```bash
+# Scan current directory
+npx ghost-hunter .
+
+# Scan specific directory
+npx ghost-hunter ./src/components
+```
+
+### CI/CD Integration
+Add to your GitHub Actions or GitLab CI:
+```yaml
+- name: Detect Hallucinations
+  run: npx ghost-hunter .
+```
+
+### Command Line Options
+- `--help` - Show all commands
+- `--json` - Output as JSON
+- `--ignore` - Ignore patterns (glob)
+
+---
+
+## ⚙️ Configuration
+
+Ghost Hunter supports a `.ghostrc` file:
+
+```json
+{
+  "exclude": ["dist", "coverage", "**/*.test.ts"],
+  "rules": {
+    "no-unused": "error",
+    "hallucination": "error"
+  }
+}
+```
+
+---
+
+## 🌐 Website
+
+This repository contains the marketing website for Ghost Hunter, built with:
+
+- **React 19** - UI framework
+- **TypeScript** - Type safety
+- **Vite** - Build tool
+- **Tailwind CSS** - Styling
+- **Framer Motion** - Animations
+
+### Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+---
+
+## 📄 License
+
+MIT License - see [LICENSE](LICENSE) for details
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## 📧 Contact
+
+- GitHub: [@01Developer95](https://github.com/01Developer95)
+- Repository: [Ghost-Hunter](https://github.com/01Developer95/Ghost-Hunter)
+
+---
+
+**Built with ❤️ to make AI-assisted coding safer.**
