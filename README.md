@@ -141,7 +141,14 @@ If you want to contribute or modify the tool, here are the commands you need:
    node dist/index.js fixtures
    ```
    - **What it does:** Runs the compiled tool on a test folder.
-   - **Why:** To verify your changes work without publishing to npm.
+3. **Stop Testing (Unlink)**
+   When you're done testing locally and want to clean up:
+   ```bash
+   # Remove the global link
+   npm unlink
+   ```
+   - **What it does:** Removes the `ghost-import-hunter` command from your system.
+
 
 ---
 
