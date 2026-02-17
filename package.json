@@ -4,7 +4,7 @@
     "description": "Deterministic tool to detect AI hallucinations and code bloat by verifying import safety against installed node_modules",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/01Developer95/Ghost-Hunter.git"
+        "url": "git+https://github.com/01Developer95/Ghost-Import-Hunter.git"
     },
     "main": "dist/index.js",
     "bin": {

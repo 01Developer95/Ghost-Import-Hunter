@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/01Developer95/Ghost-Hunter/main/media/header.png" alt="Ghost Hunter" width="100%">
+  <img src="https://raw.githubusercontent.com/01Developer95/Ghost-Import-Hunter/main/media/header.png" alt="Ghost Hunter" width="100%">
 </div>
 
 <div align="center">
@@ -172,7 +172,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## 📧 Contact
 
 - GitHub: [@01Developer95](https://github.com/01Developer95)
-- Repository: [Ghost-Hunter](https://github.com/01Developer95/Ghost-Hunter)
+- Repository: [Ghost-Import-Hunter](https://github.com/01Developer95/Ghost-Import-Hunter)
 
 ---
 

@@ -48,7 +48,7 @@ It's developers who know HOW to use AI to ship faster.
 
 Problem identification + Product thinking + AI execution = Real value
 
-🔗 GitHub: github.com/01Developer95/Ghost-Hunter
+🔗 GitHub: github.com/01Developer95/Ghost-Import-Hunter
 📦 NPM: npmjs.com/package/ghost-import-hunter
 
 If you're hiring developers who can identify problems, architect solutions, and ship complete products (with or without AI), let's connect. 🚀
@@ -116,7 +116,7 @@ npx ghost-import-hunter .
 ```
 
 📦 NPM: npmjs.com/package/ghost-import-hunter
-🔗 GitHub: github.com/01Developer95/Ghost-Hunter
+🔗 GitHub: github.com/01Developer95/Ghost-Import-Hunter
 
 Looking for roles where I can combine product thinking with technical execution. 💼
 
@@ -183,7 +183,7 @@ Full transparency: I used AI assistance (Claude/ChatGPT) for implementation.
 **Tech Stack:**
 TypeScript • Node.js • React • Vite • npm • CI/CD
 
-🔗 GitHub: github.com/01Developer95/Ghost-Hunter
+🔗 GitHub: github.com/01Developer95/Ghost-Import-Hunter
 📦 NPM: npmjs.com/package/ghost-import-hunter
 
 Open to opportunities where I can identify problems, design solutions, and ship products that create real value. �
@@ -249,7 +249,7 @@ npx ghost-import-hunter .
 A real tool, solving real problems, used by real developers.
 
 📦 NPM: npmjs.com/package/ghost-import-hunter
-🔗 GitHub: github.com/01Developer95/Ghost-Hunter
+🔗 GitHub: github.com/01Developer95/Ghost-Import-Hunter
 
 **The Lesson:**
 In 2026, the question isn't "Can you code?"
