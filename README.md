@@ -15,6 +15,8 @@
 ## 🚀 Features
 
 - **Deterministic Validation** - Verify every import against your actual installed modules. No guessing or regex.
+- **Deep Export Analysis** - Uses TypeScript Compiler API to correctly resolve `export *`, re-exports, and aliases.
+- **Local File Scanning** - Validates imports from your own local files, not just external packages.
 - **Zero Configuration** - Works out of the box. Just run `npx ghost-hunter` in your project root.
 - **CI/CD Ready** - Fails the build if hallucinations are detected. Preventing bad code from merging.
 
@@ -54,9 +56,12 @@ Ghost Hunter uses three core technologies to ensure your code is safe:
 **Role:** Finding your files.
 Just like your terminal finds files when you type `ls *.ts`, Ghost Hunter uses `glob` to scan your entire project's TypeScript and JavaScript files, ignoring junk like `node_modules`.
 
-### 2. `fs` (File System) - The Reader
-**Role:** Reading your code.
-`fs` is the engine that allows Ghost Hunter to open every file found by the scanner and read its contents to find imports to verify.
+### 2. TypeScript Compiler API - The Brain
+**Role:** Understanding your code.
+Unlike v1 which used Regex, v2.0 uses the real **TypeScript Compiler API** to parse your code, resolve symbols, and track exports across files. This allows it to:
+- Follow `export * from ...` chains.
+- Understand aliased imports (`import { foo as bar }`).
+- Detect missing exports in local files.
 
 ### 3. `chalk` - The Reporter
 **Role:** Making sense of the output.

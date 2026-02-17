@@ -6,8 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const chalk_1 = __importDefault(require("chalk"));
-const scanner_1 = require("./scanner");
-const validator_1 = require("./validator");
+const analyzer_1 = require("./analyzer");
 const program = new commander_1.Command();
 program
     .name('ghost-hunter')
@@ -17,14 +16,15 @@ program
     .action(async (directory) => {
     console.log(chalk_1.default.blue(`👻 Ghost Hunter scanning: ${directory}...`));
     try {
-        const imports = await (0, scanner_1.scanProject)(directory);
-        const report = await (0, validator_1.validateImports)(directory, imports);
+        // New v2 Engine using TS Compiler API
+        const report = await (0, analyzer_1.analyzeProject)(directory);
         if (report.hallucinations.length > 0) {
             console.log(chalk_1.default.red('\n🚨 Hallucinations Detected (AI Lied!):'));
             report.hallucinations.forEach(h => {
-                console.log(`  - ${chalk_1.default.bold(h.module)}: Used member ${chalk_1.default.bold(h.member)} does not exist in installed version.`);
+                console.log(`  - ${chalk_1.default.bold(h.module)}: Used member ${chalk_1.default.bold(h.member)} does not exist.`);
                 console.log(`    File: ${h.file}:${h.line}`);
             });
+            process.exit(1); // Fail the build
         }
         else {
             console.log(chalk_1.default.green('\n✅ No Hallucinations detected.'));

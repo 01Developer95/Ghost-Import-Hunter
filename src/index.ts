@@ -2,8 +2,7 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { scanProject } from './scanner';
-import { validateImports } from './validator';
+import { analyzeProject } from './analyzer';
 
 const program = new Command();
 
@@ -16,15 +15,16 @@ program
         console.log(chalk.blue(`👻 Ghost Hunter scanning: ${directory}...`));
 
         try {
-            const imports = await scanProject(directory);
-            const report = await validateImports(directory, imports);
+            // New v2 Engine using TS Compiler API
+            const report = await analyzeProject(directory);
 
             if (report.hallucinations.length > 0) {
                 console.log(chalk.red('\n🚨 Hallucinations Detected (AI Lied!):'));
                 report.hallucinations.forEach(h => {
-                    console.log(`  - ${chalk.bold(h.module)}: Used member ${chalk.bold(h.member)} does not exist in installed version.`);
+                    console.log(`  - ${chalk.bold(h.module)}: Used member ${chalk.bold(h.member)} does not exist.`);
                     console.log(`    File: ${h.file}:${h.line}`);
                 });
+                process.exit(1); // Fail the build
             } else {
                 console.log(chalk.green('\n✅ No Hallucinations detected.'));
             }
