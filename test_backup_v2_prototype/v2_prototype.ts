@@ -1,7 +1,6 @@
 
 import * as ts from 'typescript';
 import * as path from 'path';
-import * as fs from 'fs';
 
 function validateFile(filePath: string) {
     const program = ts.createProgram([filePath], {
