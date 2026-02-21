@@ -104,7 +104,7 @@ Add to your GitHub Actions or GitLab CI:
 ### Command Line Options
 
 ```bash
- ghost-hunter [options] [directory]
+ ghost-import-hunter [options] [directory]
 ```
 
 **Arguments:**
