@@ -103,6 +103,19 @@ Add to your GitHub Actions or GitLab CI:
 
 ### Command Line Options
 
+To see all available commands, you can view the help menu:
+
+**Using npx:**
+```bash
+npx ghost-import-hunter --help
+```
+
+**Local Development:**
+```bash
+node dist/index.js --help
+```
+
+**Output:**
 ```text
 Usage: ghost-import-hunter [options] [directory]
 
