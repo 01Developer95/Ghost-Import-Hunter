@@ -13,7 +13,7 @@ const program = new Command();
 program
     .name('ghost-import-hunter')
     .description('A deterministic tool to find AI hallucinations and unused code')
-    .version('3.0.0')
+    .version('3.0.1')
     .argument('[directory]', 'Directory to scan', '.')
     .option('--fix', 'Automatically fix unused imports')
     .option('--interactive', 'Interactively fix unused imports and hallucinations')
