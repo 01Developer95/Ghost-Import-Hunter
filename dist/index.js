@@ -53,7 +53,34 @@ program
     .option('--fix', 'Automatically fix unused imports')
     .option('--interactive', 'Interactively fix unused imports and hallucinations')
     .option('--prune', 'Uninstall completely unused dependencies from package.json')
+    .option('--uninstall-self', 'Uninstall ghost-import-hunter globally from your system')
     .action(async (directory, options) => {
+    if (options.uninstallSelf) {
+        console.log(chalk_1.default.red('\n⚠️ WARNING: This will completely remove ghost-import-hunter from your system.'));
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        const answer = await new Promise(resolve => {
+            rl.question(chalk_1.default.yellow(`❓ Are you sure you want to uninstall ghost-import-hunter? (y/N) `), resolve);
+        });
+        rl.close();
+        if (answer.toLowerCase() === 'y') {
+            console.log(chalk_1.default.blue('\n🗑️ Uninstalling ghost-import-hunter...'));
+            try {
+                const { execSync } = require('child_process');
+                execSync('npm uninstall -g ghost-import-hunter', { stdio: 'inherit' });
+                console.log(chalk_1.default.green('✨ Successfully uninstalled ghost-import-hunter. Goodbye! 👋'));
+            }
+            catch (err) {
+                console.error(chalk_1.default.red('❌ Failed to uninstall:'), err);
+            }
+        }
+        else {
+            console.log(chalk_1.default.green('ℹ️ Uninstall cancelled. Thank you for keeping me around! 👻'));
+        }
+        return;
+    }
     console.log(chalk_1.default.blue(`👻 Ghost Hunter scanning: ${directory}...`));
     try {
         // New v2 Engine using TS Compiler API

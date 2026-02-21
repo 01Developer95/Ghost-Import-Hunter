@@ -122,14 +122,15 @@ Usage: ghost-import-hunter [options] [directory]
 A deterministic tool to find AI hallucinations and unused code
 
 Arguments:
-  directory      Directory to scan (default: ".")
+  directory         Directory to scan (default: ".")
 
 Options:
-  -V, --version  output the version number
-  --fix          Automatically fix unused imports
-  --interactive  Interactively fix unused imports and hallucinations
-  --prune        Uninstall completely unused dependencies from package.json
-  -h, --help     display help for command
+  -V, --version     output the version number
+  --fix             Automatically fix unused imports
+  --interactive     Interactively fix unused imports and hallucinations
+  --prune           Uninstall completely unused dependencies from package.json
+  --uninstall-self  Uninstall ghost-import-hunter globally from your system
+  -h, --help        display help for command
 ```
 
 ---
