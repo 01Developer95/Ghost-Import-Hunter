@@ -81,7 +81,7 @@ program
         }
         return;
     }
-    console.log(chalk_1.default.blue(`👻 Ghost Hunter scanning: ${directory}...`));
+    console.log(chalk_1.default.blue(`👻 Ghost Import Hunter scanning: ${directory}...`));
     try {
         // New v2 Engine using TS Compiler API
         const report = await (0, analyzer_1.analyzeProject)(directory);
