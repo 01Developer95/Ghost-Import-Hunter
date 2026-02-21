@@ -102,9 +102,19 @@ Add to your GitHub Actions or GitLab CI:
 ```
 
 ### Command Line Options
-- `--help` - Show all commands
-- `--json` - Output as JSON
-- `--ignore` - Ignore patterns (glob)
+
+```bash
+ ghost-hunter [options] [directory]
+```
+
+**Arguments:**
+- `directory`      Directory to scan (default: ".")
+
+**Options:**
+- `-V, --version`  Output the version number
+- `--fix`          Automatically fix unused imports
+- `--interactive`  Interactively fix unused imports and hallucinations
+- `-h, --help`     Display help for command
 
 ---
 
