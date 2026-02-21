@@ -103,18 +103,20 @@ Add to your GitHub Actions or GitLab CI:
 
 ### Command Line Options
 
-```bash
- ghost-import-hunter [options] [directory]
+```text
+Usage: ghost-import-hunter [options] [directory]
+
+A deterministic tool to find AI hallucinations and unused code
+
+Arguments:
+  directory      Directory to scan (default: ".")
+
+Options:
+  -V, --version  output the version number
+  --fix          Automatically fix unused imports
+  --interactive  Interactively fix unused imports and hallucinations
+  -h, --help     display help for command
 ```
-
-**Arguments:**
-- `directory`      Directory to scan (default: ".")
-
-**Options:**
-- `-V, --version`  Output the version number
-- `--fix`          Automatically fix unused imports
-- `--interactive`  Interactively fix unused imports and hallucinations
-- `-h, --help`     Display help for command
 
 ---
 
