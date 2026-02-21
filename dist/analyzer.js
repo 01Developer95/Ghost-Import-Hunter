@@ -38,7 +38,7 @@ const ts = __importStar(require("typescript"));
 const path = __importStar(require("path"));
 const glob_1 = require("glob");
 async function analyzeProject(directory) {
-    const report = { hallucinations: [], unused: [] };
+    const report = { hallucinations: [], unused: [], usedModules: [] };
     // 1. Find all files in the project
     const files = await (0, glob_1.glob)('**/*.{ts,tsx,js,jsx}', {
         cwd: directory,
@@ -59,80 +59,165 @@ async function analyzeProject(directory) {
         skipLibCheck: true
     });
     const checker = program.getTypeChecker();
+    const allUsedModules = new Set();
     // 3. Analyze each file
     for (const sourceFile of program.getSourceFiles()) {
         // Skip external library files (node_modules)
         if (sourceFile.fileName.includes('node_modules'))
             continue;
         // Also ensure we are only analyzing files we actually found (extra safety)
-        // Normalize paths for comparison
         const normalizedFilePath = path.resolve(sourceFile.fileName);
         const isProjectFile = files.some(f => path.resolve(f) === normalizedFilePath);
         if (!isProjectFile)
             continue;
+        // Track imports to find unused ones
+        // Map<Symbol, UnusedItem>
+        const trackedImports = new Map();
+        // Pass 1: Collect Imports & Check Hallucinations
         ts.forEachChild(sourceFile, (node) => {
             if (ts.isImportDeclaration(node)) {
-                visitImportDeclaration(node, sourceFile, checker, report);
+                visitImportDeclaration(node, sourceFile, checker, report, trackedImports, allUsedModules);
             }
         });
+        // Pass 2: Check Usage
+        // We visit all nodes EXCEPT ImportDeclarations (which we already processed)
+        // If we find an identifier that resolves to a symbol in 'trackedImports', delete it from the map.
+        const visitUsage = (node) => {
+            if (ts.isIdentifier(node)) {
+                const symbol = checker.getSymbolAtLocation(node);
+                if (symbol) {
+                    // Check direct match
+                    if (trackedImports.has(symbol)) {
+                        trackedImports.delete(symbol);
+                    }
+                    else {
+                        // Handle aliased symbols (e.g. import { a as b } ... b usage checks alias a)
+                        // Actually, 'getSymbolAtLocation' on the usage 'b' returns the local symbol for 'b'.
+                        // And that IS the key in our map.
+                        // However, TypeScript sometimes handles equality strictly.
+                        // What if it's a shorthand property? { b } -> uses b.
+                        if (symbol.flags & ts.SymbolFlags.Alias) {
+                            const aliased = checker.getAliasedSymbol(symbol);
+                            if (aliased && trackedImports.has(aliased)) {
+                                trackedImports.delete(aliased);
+                            }
+                        }
+                    }
+                }
+            }
+            // Recurse, but don't enter ImportDeclarations again
+            if (!ts.isImportDeclaration(node)) {
+                ts.forEachChild(node, visitUsage);
+            }
+        };
+        ts.forEachChild(sourceFile, (node) => {
+            if (!ts.isImportDeclaration(node)) {
+                visitUsage(node);
+            }
+        });
+        // Any remaining imports are unused
+        trackedImports.forEach((unusedItem) => {
+            report.unused.push(unusedItem);
+        });
     }
+    report.usedModules = Array.from(allUsedModules);
     return report;
 }
-function visitImportDeclaration(node, sourceFile, checker, report) {
+function visitImportDeclaration(node, sourceFile, checker, report, trackedImports, allUsedModules) {
     const moduleSpecifier = node.moduleSpecifier;
     if (!ts.isStringLiteral(moduleSpecifier))
         return;
     const moduleName = moduleSpecifier.text;
-    // Resolve Module Symbol
+    allUsedModules.add(moduleName);
+    // Resolve Module Symbol (Hallucination Check)
     const symbol = checker.getSymbolAtLocation(moduleSpecifier);
     if (!symbol) {
-        // Module not found at all
-        // Get line number
         const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
         report.hallucinations.push({
             file: sourceFile.fileName,
             line: line + 1,
+            start: node.getStart(),
+            end: node.getEnd(),
             module: moduleName,
             member: '*' // Whole module missing
         });
-        return;
+        return; // Can't check usage if module missing
     }
-    // Check Named Imports
-    if (node.importClause && node.importClause.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
+    // Default Import
+    if (node.importClause?.name) {
+        const defaultImport = node.importClause.name;
+        const defaultSymbol = checker.getSymbolAtLocation(defaultImport);
+        if (defaultSymbol) {
+            const { line } = sourceFile.getLineAndCharacterOfPosition(defaultImport.getStart());
+            trackedImports.set(defaultSymbol, {
+                file: sourceFile.fileName,
+                line: line + 1,
+                start: defaultImport.getStart(),
+                end: defaultImport.getEnd(),
+                module: moduleName,
+                member: 'default'
+            });
+        }
+    }
+    // Namespace Import (* as name)
+    if (node.importClause?.namedBindings && ts.isNamespaceImport(node.importClause.namedBindings)) {
+        const namespaceImport = node.importClause.namedBindings.name;
+        const nsSymbol = checker.getSymbolAtLocation(namespaceImport);
+        if (nsSymbol) {
+            const { line } = sourceFile.getLineAndCharacterOfPosition(namespaceImport.getStart());
+            trackedImports.set(nsSymbol, {
+                file: sourceFile.fileName,
+                line: line + 1,
+                start: namespaceImport.getStart(),
+                end: namespaceImport.getEnd(),
+                module: moduleName,
+                member: '* as ' + namespaceImport.text
+            });
+        }
+    }
+    // Named Imports
+    if (node.importClause?.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
         node.importClause.namedBindings.elements.forEach(element => {
             const importName = element.propertyName?.text || element.name.text;
-            const importSymbol = checker.getSymbolAtLocation(element.name);
+            const localName = element.name; // The identifier in the code
+            const importSymbol = checker.getSymbolAtLocation(localName);
             const { line } = sourceFile.getLineAndCharacterOfPosition(element.getStart());
             if (importSymbol) {
-                const aliasedSymbol = checker.getAliasedSymbol(importSymbol);
+                // Hallucination Check for Named Exports
+                let aliasedSymbol;
+                if (importSymbol.flags & ts.SymbolFlags.Alias) {
+                    aliasedSymbol = checker.getAliasedSymbol(importSymbol);
+                }
                 if (aliasedSymbol) {
-                    // Check for "unknown" symbol or missing declarations which indicates a hallucination
                     if (aliasedSymbol.escapedName === 'unknown' || !aliasedSymbol.declarations || aliasedSymbol.declarations.length === 0) {
                         report.hallucinations.push({
                             file: sourceFile.fileName,
                             line: line + 1,
+                            start: element.getStart(),
+                            end: element.getEnd(),
                             module: moduleName,
                             member: importName
                         });
+                        return; // Don't track unused if it's a hallucination
                     }
                 }
-                else {
-                    // If no aliased symbol, it might be a direct interface/type or something we couldn't resolve deeply
-                    // For now, if we have a symbol, we assume it exists to avoid false positives unless we are sure.
-                    // But in our prototype `ghost` gave a symbol that resolved to `unknown`.
-                    // If `getAliasedSymbol` throws or returns undefined, it might be a local symbol.
-                    // Double check with module exports if possible
-                    // const moduleExports = checker.getExportsOfModule(symbol);
-                    // if (!moduleExports.some(e => e.name === importName)) {
-                    //      // Potential hallucination or just a type?
-                    // }
-                }
+                // Add to tracked imports for usage check
+                trackedImports.set(importSymbol, {
+                    file: sourceFile.fileName,
+                    line: line + 1,
+                    start: element.getStart(),
+                    end: element.getEnd(),
+                    module: moduleName,
+                    member: importName
+                });
             }
             else {
-                // No symbol found at location - definitely a hallucination
+                // Hallucination
                 report.hallucinations.push({
                     file: sourceFile.fileName,
                     line: line + 1,
+                    start: element.getStart(),
+                    end: element.getEnd(),
                     module: moduleName,
                     member: importName
                 });

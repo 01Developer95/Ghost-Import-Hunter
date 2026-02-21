@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import * as fs from 'fs';
+import * as path from 'path';
 import * as ts from 'typescript';
 import * as readline from 'readline';
 import { analyzeProject, Unused, Hallucination } from './analyzer';
@@ -16,6 +17,7 @@ program
     .argument('[directory]', 'Directory to scan', '.')
     .option('--fix', 'Automatically fix unused imports')
     .option('--interactive', 'Interactively fix unused imports and hallucinations')
+    .option('--prune', 'Uninstall completely unused dependencies from package.json')
     .action(async (directory, options) => {
         console.log(chalk.blue(`👻 Ghost Hunter scanning: ${directory}...`));
 
@@ -114,6 +116,53 @@ program
                     console.log(chalk.green('✨ Auto-fix complete!'));
                 } else {
                     console.log(chalk.yellow('ℹ️ Auto-fix cancelled.'));
+                }
+            }
+
+            if (options.prune) {
+                const packageJsonPath = path.join(directory, 'package.json');
+                if (fs.existsSync(packageJsonPath)) {
+                    console.log(chalk.blue('\n🔍 Checking for completely unused dependencies...'));
+                    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+                    const deps = Object.keys(pkg.dependencies || {});
+
+                    // Filter out types and our own tool just in case
+                    const projectDeps = deps.filter(d => !d.startsWith('@types/') && d !== 'ghost-import-hunter');
+
+                    const toRemove = projectDeps.filter(dep => !report.usedModules.includes(dep));
+
+                    if (toRemove.length > 0) {
+                        console.log(chalk.yellow(`\n🗑️ Found ${toRemove.length} unused dependencies:`));
+                        toRemove.forEach(d => console.log(`  - ${chalk.bold(d)}`));
+
+                        const rl = readline.createInterface({
+                            input: process.stdin,
+                            output: process.stdout
+                        });
+
+                        const answer = await new Promise<string>(resolve => {
+                            rl.question(chalk.red(`\n❓ Are you sure you want to uninstall these packages? (y/N) `), resolve);
+                        });
+
+                        rl.close();
+
+                        if (answer.toLowerCase() === 'y') {
+                            console.log(chalk.blue(`\n📦 Uninstalling ${toRemove.join(', ')}...`));
+                            try {
+                                const { execSync } = require('child_process');
+                                execSync(`npm uninstall ${toRemove.join(' ')}`, { stdio: 'inherit', cwd: directory });
+                                console.log(chalk.green('✨ Pruning complete!'));
+                            } catch (err) {
+                                console.error(chalk.red('❌ Failed to uninstall packages:'), err);
+                            }
+                        } else {
+                            console.log(chalk.yellow('ℹ️ Pruning cancelled.'));
+                        }
+                    } else {
+                        console.log(chalk.green('\n✨ No unused dependencies found in package.json!'));
+                    }
+                } else {
+                    console.log(chalk.yellow('\n⚠️ No package.json found in the specified directory. Cannot prune dependencies.'));
                 }
             }
 

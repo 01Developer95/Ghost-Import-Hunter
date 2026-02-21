@@ -128,6 +128,7 @@ Options:
   -V, --version  output the version number
   --fix          Automatically fix unused imports
   --interactive  Interactively fix unused imports and hallucinations
+  --prune        Uninstall completely unused dependencies from package.json
   -h, --help     display help for command
 ```
 
