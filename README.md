@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/01Developer95/Ghost-Import-Hunter/main/media/header.png" alt="Ghost Hunter" width="100%">
+  <img src="https://raw.githubusercontent.com/01Developer95/Ghost-Import-Hunter/main/media/header.png" alt="Ghost Import Hunter" width="100%">
 </div>
 
 <div align="center">
 
-![Ghost Hunter](https://img.shields.io/badge/status-active-success.svg)
+![Ghost Import Hunter](https://img.shields.io/badge/status-active-success.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D16-brightgreen.svg)
 
@@ -17,16 +17,16 @@
 - **Deterministic Validation** - Verify every import against your actual installed modules. No guessing or regex.
 - **Deep Export Analysis** - Uses TypeScript Compiler API to correctly resolve `export *`, re-exports, and aliases.
 - **Local File Scanning** - Validates imports from your own local files, not just external packages.
-- **Zero Configuration** - Works out of the box. Just run `npx ghost-hunter` in your project root.
+- **Zero Configuration** - Works out of the box. Just run `npx ghost-import-hunter` in your project root.
 - **CI/CD Ready** - Fails the build if hallucinations are detected. Preventing bad code from merging.
 
 ---
 
 ## 🤔 What is a Hallucination?
 
-AI coding assistants often suggest imports that **look real but don't exist**. Ghost Hunter catches these bugs before they break your app.
+AI coding assistants often suggest imports that **look real but don't exist**. Ghost Import Hunter catches these bugs before they break your app.
 
-### Examples of what Ghost Hunter catches:
+### Examples of what Ghost Import Hunter catches:
 
 **1. The "Fake Function" Hallucination**
 ```typescript
@@ -50,11 +50,11 @@ import { utils } from 'dependency-i-never-installed';
 
 ## 🧠 How it Works (Under the Hood)
 
-Ghost Hunter uses three core technologies to ensure your code is safe:
+Ghost Import Hunter uses three core technologies to ensure your code is safe:
 
 ### 1. `glob` - The Scanner
 **Role:** Finding your files.
-Just like your terminal finds files when you type `ls *.ts`, Ghost Hunter uses `glob` to scan your entire project's TypeScript and JavaScript files, ignoring junk like `node_modules`.
+Just like your terminal finds files when you type `ls *.ts`, Ghost Import Hunter uses `glob` to scan your entire project's TypeScript and JavaScript files, ignoring junk like `node_modules`.
 
 ### 2. TypeScript Compiler API - The Brain
 **Role:** Understanding your code.
@@ -65,7 +65,7 @@ Unlike v1 which used Regex, v2.0 uses the real **TypeScript Compiler API** to pa
 
 ### 3. `chalk` - The Reporter
 **Role:** Making sense of the output.
-When a hallucination is found, Ghost Hunter uses `chalk` to highlight the error in **red** and the file path in **bold**, making it impossible to miss critical bugs in your terminal.
+When a hallucination is found, Ghost Import Hunter uses `chalk` to highlight the error in **red** and the file path in **bold**, making it impossible to miss critical bugs in your terminal.
 
 ---
 
@@ -137,7 +137,7 @@ Options:
 
 ## ⚙️ Configuration
 
-Ghost Hunter supports a `.ghostrc` file:
+Ghost Import Hunter supports a `.ghostrc` file:
 
 ```json
 {
