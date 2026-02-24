@@ -54,6 +54,9 @@ program
     .option('--interactive', 'Interactively fix unused imports and hallucinations')
     .option('--prune', 'Uninstall completely unused dependencies from package.json')
     .option('--uninstall-self', 'Uninstall ghost-import-hunter globally from your system')
+    .option('--output <file>', 'Output report to JSON or HTML file')
+    .option('--changed', 'Only scan files changed in git (staged or unstaged)')
+    .option('--watch', 'Watch mode: auto re-scan on file save')
     .action(async (directory, options) => {
     if (options.uninstallSelf) {
         console.log(chalk_1.default.red('\n⚠️ WARNING: This will completely remove ghost-import-hunter from your system.'));
@@ -81,138 +84,172 @@ program
         }
         return;
     }
-    console.log(chalk_1.default.blue(`👻 Ghost Import Hunter scanning: ${directory}...`));
-    try {
-        // New v2 Engine using TS Compiler API
-        const report = await (0, analyzer_1.analyzeProject)(directory);
-        let hasError = false;
-        if (report.hallucinations.length > 0) {
-            console.log(chalk_1.default.red('\n🚨 Hallucinations Detected (AI Lied!):'));
-            report.hallucinations.forEach(h => {
-                console.log(`  - ${chalk_1.default.bold(h.module)}: Used member ${chalk_1.default.bold(h.member)} does not exist.`);
-                console.log(`    File: ${h.file}:${h.line}`);
-            });
-            hasError = true;
-        }
-        else {
-            console.log(chalk_1.default.green('\n✅ No Hallucinations detected.'));
-        }
-        if (report.unused.length > 0) {
-            console.log(chalk_1.default.yellow('\n⚠️  Unused Imports (Bloat):'));
-            report.unused.forEach(u => {
-                console.log(`  - ${chalk_1.default.bold(u.module)}: Imported but never used.`);
-                console.log(`    File: ${u.file}:${u.line}`);
-            });
-        }
-        if (options.interactive) {
-            const fixes = [];
-            const allIssues = [...report.hallucinations, ...report.unused];
-            if (allIssues.length === 0) {
-                console.log(chalk_1.default.green('\n✨ No issues to fix!'));
-                return;
-            }
-            console.log(chalk_1.default.blue(`\n🕵️ Interactive Mode: Found ${allIssues.length} issues.`));
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
-            for (const issue of allIssues) {
-                const isHallucination = 'member' in issue && report.hallucinations.includes(issue);
-                const type = isHallucination ? chalk_1.default.red('Hallucination') : chalk_1.default.yellow('Unused');
-                console.log(chalk_1.default.gray('--------------------------------------------------'));
-                console.log(`${type}: ${chalk_1.default.bold(issue.module)} (${issue.member})`);
-                console.log(`  File: ${issue.file}:${issue.line}`);
-                const answer = await new Promise(resolve => {
-                    rl.question(chalk_1.default.cyan('  Action? [d]elete, [s]kip (default: skip): '), resolve);
+    const runAnalysis = async () => {
+        console.log(chalk_1.default.blue(`👻 Ghost Import Hunter scanning: ${directory}...`));
+        try {
+            // New v4 Engine using TS Compiler API
+            const report = await (0, analyzer_1.analyzeProject)(directory, { changedOnly: options.changed });
+            let hasError = false;
+            if (report.hallucinations.length > 0) {
+                console.log(chalk_1.default.red('\n🚨 Hallucinations Detected (AI Lied!):'));
+                report.hallucinations.forEach(h => {
+                    console.log(`  - ${chalk_1.default.bold(h.module)}: Used member ${chalk_1.default.bold(h.member)} does not exist.`);
+                    console.log(`    File: ${h.file}:${h.line}`);
                 });
-                if (answer.toLowerCase() === 'd') {
-                    fixes.push(issue);
-                    console.log(chalk_1.default.green('  -> Marked for deletion.'));
+                hasError = true;
+            }
+            else {
+                console.log(chalk_1.default.green('\n✅ No Hallucinations detected.'));
+            }
+            if (report.unused.length > 0) {
+                console.log(chalk_1.default.yellow('\n⚠️  Unused Imports (Bloat):'));
+                report.unused.forEach(u => {
+                    console.log(`  - ${chalk_1.default.bold(u.module)}: Imported but never used.`);
+                    console.log(`    File: ${u.file}:${u.line}`);
+                });
+            }
+            if (options.output) {
+                const outPath = path.resolve(directory, options.output);
+                const ext = path.extname(outPath).toLowerCase();
+                if (ext === '.html') {
+                    const html = `<html>
+<head><title>Ghost Import Hunter Report</title><style>body{font-family:sans-serif;padding:20px;}</style></head>
+<body><h1>Ghost Import Hunter Report</h1><pre>${JSON.stringify(report, null, 2)}</pre></body>
+</html>`;
+                    fs.writeFileSync(outPath, html);
                 }
                 else {
-                    console.log(chalk_1.default.gray('  -> Skipped.'));
+                    fs.writeFileSync(outPath, JSON.stringify(report, null, 2));
+                }
+                console.log(chalk_1.default.green(`\n📄 Report saved to ${options.output}`));
+            }
+            if (options.interactive) {
+                const fixes = [];
+                const allIssues = [...report.hallucinations, ...report.unused];
+                if (allIssues.length === 0) {
+                    console.log(chalk_1.default.green('\n✨ No issues to fix!'));
+                    return;
+                }
+                console.log(chalk_1.default.blue(`\n🕵️ Interactive Mode: Found ${allIssues.length} issues.`));
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                for (const issue of allIssues) {
+                    const isHallucination = 'member' in issue && report.hallucinations.includes(issue);
+                    const type = isHallucination ? chalk_1.default.red('Hallucination') : chalk_1.default.yellow('Unused');
+                    console.log(chalk_1.default.gray('--------------------------------------------------'));
+                    console.log(`${type}: ${chalk_1.default.bold(issue.module)} (${issue.member})`);
+                    console.log(`  File: ${issue.file}:${issue.line}`);
+                    const answer = await new Promise(resolve => {
+                        rl.question(chalk_1.default.cyan('  Action? [d]elete, [s]kip (default: skip): '), resolve);
+                    });
+                    if (answer.toLowerCase() === 'd') {
+                        fixes.push(issue);
+                        console.log(chalk_1.default.green('  -> Marked for deletion.'));
+                    }
+                    else {
+                        console.log(chalk_1.default.gray('  -> Skipped.'));
+                    }
+                }
+                rl.close();
+                if (fixes.length > 0) {
+                    console.log(chalk_1.default.blue(`\n🔧 Applying ${fixes.length} fixes...`));
+                    await fixImports(fixes);
+                    console.log(chalk_1.default.green('✨ Fixes applied!'));
+                }
+                else {
+                    console.log(chalk_1.default.yellow('\nℹ️ No changes made.'));
+                }
+                // Skip the batch block below if we ran interactive
+                return;
+            }
+            if (options.fix && report.unused.length > 0) {
+                const rl = readline.createInterface({
+                    input: process.stdin,
+                    output: process.stdout
+                });
+                const answer = await new Promise(resolve => {
+                    rl.question(chalk_1.default.yellow(`\n❓ Found ${report.unused.length} unused imports. Do you want to fix them? (y/N) `), resolve);
+                });
+                rl.close();
+                if (answer.toLowerCase() === 'y') {
+                    console.log(chalk_1.default.blue('\n🔧 Fixing unused imports...'));
+                    await fixImports(report.unused);
+                    console.log(chalk_1.default.green('✨ Auto-fix complete!'));
+                }
+                else {
+                    console.log(chalk_1.default.yellow('ℹ️ Auto-fix cancelled.'));
                 }
             }
-            rl.close();
-            if (fixes.length > 0) {
-                console.log(chalk_1.default.blue(`\n🔧 Applying ${fixes.length} fixes...`));
-                await fixImports(fixes);
-                console.log(chalk_1.default.green('✨ Fixes applied!'));
-            }
-            else {
-                console.log(chalk_1.default.yellow('\nℹ️ No changes made.'));
-            }
-            // Skip the batch block below if we ran interactive
-            return;
-        }
-        if (options.fix && report.unused.length > 0) {
-            const rl = readline.createInterface({
-                input: process.stdin,
-                output: process.stdout
-            });
-            const answer = await new Promise(resolve => {
-                rl.question(chalk_1.default.yellow(`\n❓ Found ${report.unused.length} unused imports. Do you want to fix them? (y/N) `), resolve);
-            });
-            rl.close();
-            if (answer.toLowerCase() === 'y') {
-                console.log(chalk_1.default.blue('\n🔧 Fixing unused imports...'));
-                await fixImports(report.unused);
-                console.log(chalk_1.default.green('✨ Auto-fix complete!'));
-            }
-            else {
-                console.log(chalk_1.default.yellow('ℹ️ Auto-fix cancelled.'));
-            }
-        }
-        if (options.prune) {
-            const packageJsonPath = path.join(directory, 'package.json');
-            if (fs.existsSync(packageJsonPath)) {
-                console.log(chalk_1.default.blue('\n🔍 Checking for completely unused dependencies...'));
-                const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-                const deps = Object.keys(pkg.dependencies || {});
-                // Filter out types and our own tool just in case
-                const projectDeps = deps.filter(d => !d.startsWith('@types/') && d !== 'ghost-import-hunter');
-                const toRemove = projectDeps.filter(dep => !report.usedModules.includes(dep));
-                if (toRemove.length > 0) {
-                    console.log(chalk_1.default.yellow(`\n🗑️ Found ${toRemove.length} unused dependencies:`));
-                    toRemove.forEach(d => console.log(`  - ${chalk_1.default.bold(d)}`));
-                    const rl = readline.createInterface({
-                        input: process.stdin,
-                        output: process.stdout
-                    });
-                    const answer = await new Promise(resolve => {
-                        rl.question(chalk_1.default.red(`\n❓ Are you sure you want to uninstall these packages? (y/N) `), resolve);
-                    });
-                    rl.close();
-                    if (answer.toLowerCase() === 'y') {
-                        console.log(chalk_1.default.blue(`\n📦 Uninstalling ${toRemove.join(', ')}...`));
-                        try {
-                            const { execSync } = require('child_process');
-                            execSync(`npm uninstall ${toRemove.join(' ')}`, { stdio: 'inherit', cwd: directory });
-                            console.log(chalk_1.default.green('✨ Pruning complete!'));
+            if (options.prune) {
+                const packageJsonPath = path.join(directory, 'package.json');
+                if (fs.existsSync(packageJsonPath)) {
+                    console.log(chalk_1.default.blue('\n🔍 Checking for completely unused dependencies...'));
+                    const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+                    const deps = Object.keys(pkg.dependencies || {});
+                    // Filter out types and our own tool just in case
+                    const projectDeps = deps.filter(d => !d.startsWith('@types/') && d !== 'ghost-import-hunter');
+                    const toRemove = projectDeps.filter(dep => !report.usedModules.includes(dep));
+                    if (toRemove.length > 0) {
+                        console.log(chalk_1.default.yellow(`\n🗑️ Found ${toRemove.length} unused dependencies:`));
+                        toRemove.forEach(d => console.log(`  - ${chalk_1.default.bold(d)}`));
+                        const rl = readline.createInterface({
+                            input: process.stdin,
+                            output: process.stdout
+                        });
+                        const answer = await new Promise(resolve => {
+                            rl.question(chalk_1.default.red(`\n❓ Are you sure you want to uninstall these packages? (y/N) `), resolve);
+                        });
+                        rl.close();
+                        if (answer.toLowerCase() === 'y') {
+                            console.log(chalk_1.default.blue(`\n📦 Uninstalling ${toRemove.join(', ')}...`));
+                            try {
+                                const { execSync } = require('child_process');
+                                execSync(`npm uninstall ${toRemove.join(' ')}`, { stdio: 'inherit', cwd: directory });
+                                console.log(chalk_1.default.green('✨ Pruning complete!'));
+                            }
+                            catch (err) {
+                                console.error(chalk_1.default.red('❌ Failed to uninstall packages:'), err);
+                            }
                         }
-                        catch (err) {
-                            console.error(chalk_1.default.red('❌ Failed to uninstall packages:'), err);
+                        else {
+                            console.log(chalk_1.default.yellow('ℹ️ Pruning cancelled.'));
                         }
                     }
                     else {
-                        console.log(chalk_1.default.yellow('ℹ️ Pruning cancelled.'));
+                        console.log(chalk_1.default.green('\n✨ No unused dependencies found in package.json!'));
                     }
                 }
                 else {
-                    console.log(chalk_1.default.green('\n✨ No unused dependencies found in package.json!'));
+                    console.log(chalk_1.default.yellow('\n⚠️ No package.json found in the specified directory. Cannot prune dependencies.'));
                 }
             }
-            else {
-                console.log(chalk_1.default.yellow('\n⚠️ No package.json found in the specified directory. Cannot prune dependencies.'));
+            if (!options.watch && hasError) {
+                process.exit(1);
             }
         }
-        if (hasError) {
-            process.exit(1);
+        catch (error) {
+            console.error(chalk_1.default.red('Error scanning project:'), error);
+            if (!options.watch) {
+                process.exit(1);
+            }
         }
+    };
+    if (options.watch) {
+        console.log(chalk_1.default.cyan(`\n👀 Watch mode enabled. Scanning on file changes...`));
+        await runAnalysis();
+        // Watch specific folder
+        fs.watch(directory, { recursive: true }, async (eventType, filename) => {
+            if (filename && (filename.endsWith('.ts') || filename.endsWith('.tsx') || filename.endsWith('.js') || filename.endsWith('.jsx'))) {
+                console.clear();
+                console.log(chalk_1.default.cyan(`\n🔄 File changed: ${filename}. Re-scanning...`));
+                await runAnalysis();
+            }
+        });
     }
-    catch (error) {
-        console.error(chalk_1.default.red('Error scanning project:'), error);
-        process.exit(1);
+    else {
+        await runAnalysis();
     }
 });
 async function fixImports(unused) {

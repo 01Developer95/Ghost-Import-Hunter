@@ -1,0 +1,71 @@
+{
+  "hallucinations": [
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 2,
+      "start": 36,
+      "end": 50,
+      "module": "chalk",
+      "member": "someFakeMember"
+    },
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 3,
+      "start": 82,
+      "end": 90,
+      "module": "ora",
+      "member": "FakeType"
+    },
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 4,
+      "start": 113,
+      "end": 123,
+      "module": "ts-node",
+      "member": "default"
+    },
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 5,
+      "start": 218,
+      "end": 234,
+      "module": "commander",
+      "member": "default"
+    },
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 7,
+      "start": 256,
+      "end": 282,
+      "module": "fake-module-xyz",
+      "member": "require()"
+    },
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 8,
+      "start": 285,
+      "end": 311,
+      "module": "another-fake-xyz",
+      "member": "import()"
+    }
+  ],
+  "unused": [
+    {
+      "file": "E:/get-hired/beta/test-fixtures/index.ts",
+      "line": 1,
+      "start": 12,
+      "end": 14,
+      "module": "fs",
+      "member": "* as fs"
+    }
+  ],
+  "usedModules": [
+    "fs",
+    "chalk",
+    "ora",
+    "ts-node",
+    "commander",
+    "fake-module-xyz",
+    "another-fake-xyz"
+  ]
+}

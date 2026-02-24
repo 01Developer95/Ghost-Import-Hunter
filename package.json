@@ -1,6 +1,6 @@
 {
     "name": "ghost-import-hunter",
-    "version": "3.0.1",
+    "version": "4.0.0",
     "description": "Deterministic tool to detect AI hallucinations and code bloat by verifying import safety against installed node_modules",
     "repository": {
         "type": "git",

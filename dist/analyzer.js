@@ -37,14 +37,26 @@ exports.analyzeProject = analyzeProject;
 const ts = __importStar(require("typescript"));
 const path = __importStar(require("path"));
 const glob_1 = require("glob");
-async function analyzeProject(directory) {
+async function analyzeProject(directory, options = {}) {
     const report = { hallucinations: [], unused: [], usedModules: [] };
     // 1. Find all files in the project
-    const files = await (0, glob_1.glob)('**/*.{ts,tsx,js,jsx}', {
+    let files = await (0, glob_1.glob)('**/*.{ts,tsx,js,jsx}', {
         cwd: directory,
         ignore: ['node_modules/**', 'dist/**', 'build/**', '.git/**'],
         absolute: true
     });
+    if (options.changedOnly) {
+        try {
+            const { execSync } = require('child_process');
+            // Get modified, deleted, and untracked files
+            const gitDiff = execSync('git diff --name-only HEAD && git ls-files --others --exclude-standard', { cwd: directory, encoding: 'utf8' });
+            const changedFiles = new Set(gitDiff.split('\n').map((f) => f.trim()).filter(Boolean).map((f) => path.resolve(directory, f)));
+            files = files.filter(f => changedFiles.has(path.resolve(f)));
+        }
+        catch (err) {
+            console.warn('⚠️ Could not determine git changed files. Falling back to scanning all files.');
+        }
+    }
     if (files.length === 0) {
         return report;
     }
@@ -74,11 +86,19 @@ async function analyzeProject(directory) {
         // Map<Symbol, UnusedItem>
         const trackedImports = new Map();
         // Pass 1: Collect Imports & Check Hallucinations
-        ts.forEachChild(sourceFile, (node) => {
+        const visitPass1 = (node) => {
             if (ts.isImportDeclaration(node)) {
                 visitImportDeclaration(node, sourceFile, checker, report, trackedImports, allUsedModules);
             }
-        });
+            else if (ts.isCallExpression(node)) {
+                visitCallExpression(node, sourceFile, checker, report, allUsedModules);
+                ts.forEachChild(node, visitPass1);
+            }
+            else {
+                ts.forEachChild(node, visitPass1);
+            }
+        };
+        visitPass1(sourceFile);
         // Pass 2: Check Usage
         // We visit all nodes EXCEPT ImportDeclarations (which we already processed)
         // If we find an identifier that resolves to a symbol in 'trackedImports', delete it from the map.
@@ -147,7 +167,24 @@ function visitImportDeclaration(node, sourceFile, checker, report, trackedImport
     if (node.importClause?.name) {
         const defaultImport = node.importClause.name;
         const defaultSymbol = checker.getSymbolAtLocation(defaultImport);
-        if (defaultSymbol) {
+        // Check if module actually has a default export
+        const moduleSymbol = checker.getSymbolAtLocation(moduleSpecifier);
+        let hasDefaultExport = true;
+        if (moduleSymbol && moduleSymbol.exports) {
+            hasDefaultExport = moduleSymbol.exports.has(ts.escapeLeadingUnderscores('default'));
+        }
+        if (moduleSymbol && !hasDefaultExport) {
+            const { line } = sourceFile.getLineAndCharacterOfPosition(defaultImport.getStart());
+            report.hallucinations.push({
+                file: sourceFile.fileName,
+                line: line + 1,
+                start: defaultImport.getStart(),
+                end: defaultImport.getEnd(),
+                module: moduleName,
+                member: node.importClause.isTypeOnly ? 'default (type)' : 'default'
+            });
+        }
+        else if (defaultSymbol) {
             const { line } = sourceFile.getLineAndCharacterOfPosition(defaultImport.getStart());
             trackedImports.set(defaultSymbol, {
                 file: sourceFile.fileName,
@@ -155,7 +192,7 @@ function visitImportDeclaration(node, sourceFile, checker, report, trackedImport
                 start: defaultImport.getStart(),
                 end: defaultImport.getEnd(),
                 module: moduleName,
-                member: 'default'
+                member: node.importClause.isTypeOnly ? 'default (type)' : 'default'
             });
         }
     }
@@ -219,9 +256,51 @@ function visitImportDeclaration(node, sourceFile, checker, report, trackedImport
                     start: element.getStart(),
                     end: element.getEnd(),
                     module: moduleName,
-                    member: importName
+                    member: (node.importClause?.isTypeOnly || element.isTypeOnly) ? `${importName} (type)` : importName
                 });
             }
         });
+    }
+}
+function visitCallExpression(node, sourceFile, checker, report, allUsedModules) {
+    // Check for require('module')
+    if (ts.isIdentifier(node.expression) && node.expression.text === 'require') {
+        if (node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) {
+            const moduleName = node.arguments[0].text;
+            allUsedModules.add(moduleName);
+            // Hallucination Check
+            const symbol = checker.getSymbolAtLocation(node.arguments[0]);
+            if (!symbol) {
+                const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                report.hallucinations.push({
+                    file: sourceFile.fileName,
+                    line: line + 1,
+                    start: node.getStart(),
+                    end: node.getEnd(),
+                    module: moduleName,
+                    member: 'require()'
+                });
+            }
+        }
+    }
+    // Check for import('module')
+    else if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        if (node.arguments.length >= 1 && ts.isStringLiteral(node.arguments[0])) {
+            const moduleName = node.arguments[0].text;
+            allUsedModules.add(moduleName);
+            // Hallucination Check
+            const symbol = checker.getSymbolAtLocation(node.arguments[0]);
+            if (!symbol) {
+                const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                report.hallucinations.push({
+                    file: sourceFile.fileName,
+                    line: line + 1,
+                    start: node.getStart(),
+                    end: node.getEnd(),
+                    module: moduleName,
+                    member: 'import()'
+                });
+            }
+        }
     }
 }

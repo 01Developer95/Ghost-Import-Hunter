@@ -27,15 +27,31 @@ export interface AnalysisReport {
     usedModules: string[];
 }
 
-export async function analyzeProject(directory: string): Promise<AnalysisReport> {
+export interface AnalyzeOptions {
+    changedOnly?: boolean;
+}
+
+export async function analyzeProject(directory: string, options: AnalyzeOptions = {}): Promise<AnalysisReport> {
     const report: AnalysisReport = { hallucinations: [], unused: [], usedModules: [] };
 
     // 1. Find all files in the project
-    const files = await glob('**/*.{ts,tsx,js,jsx}', {
+    let files = await glob('**/*.{ts,tsx,js,jsx}', {
         cwd: directory,
         ignore: ['node_modules/**', 'dist/**', 'build/**', '.git/**'],
         absolute: true
     });
+
+    if (options.changedOnly) {
+        try {
+            const { execSync } = require('child_process');
+            // Get modified, deleted, and untracked files
+            const gitDiff = execSync('git diff --name-only HEAD && git ls-files --others --exclude-standard', { cwd: directory, encoding: 'utf8' });
+            const changedFiles = new Set(gitDiff.split('\n').map((f: string) => f.trim()).filter(Boolean).map((f: string) => path.resolve(directory, f)));
+            files = files.filter(f => changedFiles.has(path.resolve(f)));
+        } catch (err) {
+            console.warn('⚠️ Could not determine git changed files. Falling back to scanning all files.');
+        }
+    }
 
     if (files.length === 0) {
         return report;
@@ -71,11 +87,17 @@ export async function analyzeProject(directory: string): Promise<AnalysisReport>
         const trackedImports = new Map<ts.Symbol, Unused>();
 
         // Pass 1: Collect Imports & Check Hallucinations
-        ts.forEachChild(sourceFile, (node) => {
+        const visitPass1 = (node: ts.Node) => {
             if (ts.isImportDeclaration(node)) {
                 visitImportDeclaration(node, sourceFile, checker, report, trackedImports, allUsedModules);
+            } else if (ts.isCallExpression(node)) {
+                visitCallExpression(node, sourceFile, checker, report, allUsedModules);
+                ts.forEachChild(node, visitPass1);
+            } else {
+                ts.forEachChild(node, visitPass1);
             }
-        });
+        };
+        visitPass1(sourceFile);
 
         // Pass 2: Check Usage
         // We visit all nodes EXCEPT ImportDeclarations (which we already processed)
@@ -160,7 +182,25 @@ function visitImportDeclaration(
     if (node.importClause?.name) {
         const defaultImport = node.importClause.name;
         const defaultSymbol = checker.getSymbolAtLocation(defaultImport);
-        if (defaultSymbol) {
+
+        // Check if module actually has a default export
+        const moduleSymbol = checker.getSymbolAtLocation(moduleSpecifier);
+        let hasDefaultExport = true;
+        if (moduleSymbol && moduleSymbol.exports) {
+            hasDefaultExport = moduleSymbol.exports.has(ts.escapeLeadingUnderscores('default'));
+        }
+
+        if (moduleSymbol && !hasDefaultExport) {
+            const { line } = sourceFile.getLineAndCharacterOfPosition(defaultImport.getStart());
+            report.hallucinations.push({
+                file: sourceFile.fileName,
+                line: line + 1,
+                start: defaultImport.getStart(),
+                end: defaultImport.getEnd(),
+                module: moduleName,
+                member: node.importClause.isTypeOnly ? 'default (type)' : 'default'
+            });
+        } else if (defaultSymbol) {
             const { line } = sourceFile.getLineAndCharacterOfPosition(defaultImport.getStart());
             trackedImports.set(defaultSymbol, {
                 file: sourceFile.fileName,
@@ -168,7 +208,7 @@ function visitImportDeclaration(
                 start: defaultImport.getStart(),
                 end: defaultImport.getEnd(),
                 module: moduleName,
-                member: 'default'
+                member: node.importClause.isTypeOnly ? 'default (type)' : 'default'
             });
         }
     }
@@ -236,9 +276,60 @@ function visitImportDeclaration(
                     start: element.getStart(),
                     end: element.getEnd(),
                     module: moduleName,
-                    member: importName
+                    member: (node.importClause?.isTypeOnly || element.isTypeOnly) ? `${importName} (type)` : importName
                 });
             }
         });
+    }
+}
+
+function visitCallExpression(
+    node: ts.CallExpression,
+    sourceFile: ts.SourceFile,
+    checker: ts.TypeChecker,
+    report: AnalysisReport,
+    allUsedModules: Set<string>
+) {
+    // Check for require('module')
+    if (ts.isIdentifier(node.expression) && node.expression.text === 'require') {
+        if (node.arguments.length === 1 && ts.isStringLiteral(node.arguments[0])) {
+            const moduleName = node.arguments[0].text;
+            allUsedModules.add(moduleName);
+
+            // Hallucination Check
+            const symbol = checker.getSymbolAtLocation(node.arguments[0]);
+            if (!symbol) {
+                const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                report.hallucinations.push({
+                    file: sourceFile.fileName,
+                    line: line + 1,
+                    start: node.getStart(),
+                    end: node.getEnd(),
+                    module: moduleName,
+                    member: 'require()'
+                });
+            }
+        }
+    }
+    // Check for import('module')
+    else if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        if (node.arguments.length >= 1 && ts.isStringLiteral(node.arguments[0])) {
+            const moduleName = node.arguments[0].text;
+            allUsedModules.add(moduleName);
+
+            // Hallucination Check
+            const symbol = checker.getSymbolAtLocation(node.arguments[0]);
+            if (!symbol) {
+                const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                report.hallucinations.push({
+                    file: sourceFile.fileName,
+                    line: line + 1,
+                    start: node.getStart(),
+                    end: node.getEnd(),
+                    module: moduleName,
+                    member: 'import()'
+                });
+            }
+        }
     }
 }
