@@ -1,6 +1,8 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/01Developer95/Ghost-Import-Hunter/main/media/header.png" alt="Ghost Import Hunter" width="100%">
+  <img src="https://raw.githubusercontent.com/01Developer95/Ghost-Import-Hunter/main/media/header_v4.png" alt="Ghost Import Hunter v4.0.0" width="100%">
 </div>
+
+# Ghost Import Hunter v4.0.0
 
 <div align="center">
 
@@ -58,7 +60,7 @@ Just like your terminal finds files when you type `ls *.ts`, Ghost Import Hunter
 
 ### 2. TypeScript Compiler API - The Brain
 **Role:** Understanding your code.
-Unlike v1 which used Regex, v2.0 uses the real **TypeScript Compiler API** to parse your code, resolve symbols, and track exports across files. This allows it to:
+Unlike early versions that relied on Regex, v4.0.0 uses the real **TypeScript Compiler API** to parse your code, resolve symbols, and track exports across files. This allows it to:
 - Follow `export * from ...` chains.
 - Understand aliased imports (`import { foo as bar }`).
 - Detect missing exports in local files.
